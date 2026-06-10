@@ -146,7 +146,8 @@ curl http://YOUR_SERVER_IP:7778/health
 ```json
 {
   "dependencies": {
-    "com.openrelay.unity": "https://github.com/nothing-udev/openrelay.git?path=unity-package"
+    "com.openrelay.unity": "https://github.com/nothing-udev/openrelay.git?path=unity-package",
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git"
   }
 }
 ```
@@ -173,8 +174,7 @@ OpenRelay's `package.json` currently references:
 ```json
 {
   "dependencies": {
-    "com.unity.netcode.gameobjects": "2.6.0",
-    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm"
+    "com.unity.netcode.gameobjects": "2.6.0"
   }
 }
 ```
