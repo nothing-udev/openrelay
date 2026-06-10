@@ -147,7 +147,7 @@ curl http://YOUR_SERVER_IP:7778/health
 {
   "dependencies": {
     "com.openrelay.unity": "https://github.com/nothing-udev/openrelay.git?path=unity-package",
-    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git"
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm-2"
   }
 }
 ```
