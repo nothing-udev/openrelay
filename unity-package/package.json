@@ -1,0 +1,12 @@
+{
+  "name": "com.openrelay.unity",
+  "version": "1.0.0",
+  "displayName": "OpenRelay",
+  "description": "Self-hosted Unity Relay alternative. Supports WebSocket and UDP. No per-CCU cost.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.netcode.gameobjects": "1.0.0"
+  },
+  "keywords": ["relay", "multiplayer", "netcode", "websocket", "udp"],
+  "author": { "name": "VADE" }
+}

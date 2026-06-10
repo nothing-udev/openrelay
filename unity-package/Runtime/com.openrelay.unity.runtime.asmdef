@@ -1,0 +1,6 @@
+{
+  "name": "com.openrelay.unity.runtime",
+  "rootNamespace": "OpenRelay",
+  "references": ["Unity.Netcode.Runtime"],
+  "autoReferenced": true
+}

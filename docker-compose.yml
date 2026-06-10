@@ -1,0 +1,57 @@
+version: '3.8'
+
+# OPENRELAY_IMAGE — set in .env on VPS by CI/CD (uses pre-built GHCR image).
+# Locally, leave it unset or empty: docker compose build + up works as before.
+
+services:
+  openrelay:
+    image: ${OPENRELAY_IMAGE:-}   # CI/CD sets this to ghcr.io/…; empty = use build below
+    build:
+      context: ./server           # used only when OPENRELAY_IMAGE is empty
+    restart: unless-stopped
+    ports:
+      - "7777:7777"       # WebSocket relay (TCP)
+      - "7778:7778"       # HTTP REST API + /metrics
+      - "7779:7779/udp"   # UDP relay
+    environment:
+      - OPENRELAY_TRANSPORT=both
+      # Replace with your public IP / domain, or set via .env on the VPS.
+      - OPENRELAY_PUBLIC_HOST=${OPENRELAY_PUBLIC_HOST:-YOUR_SERVER_IP:7777}
+      - OPENRELAY_UDP_PUBLIC_ADDR=${OPENRELAY_UDP_PUBLIC_ADDR:-YOUR_SERVER_IP:7779}
+      - OPENRELAY_MAX_SESSIONS=500
+      - OPENRELAY_MAX_PEERS=16
+      - OPENRELAY_SESSION_TTL=5m
+      # HMAC auth secret — set via .env or environment; empty string disables auth.
+      - OPENRELAY_HMAC_SECRET=${OPENRELAY_HMAC_SECRET:-}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7778/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - openrelay
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=changeme
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
