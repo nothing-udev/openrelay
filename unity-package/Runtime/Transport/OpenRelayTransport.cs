@@ -68,7 +68,7 @@ namespace OpenRelay.Transport
         public override bool StartClient() { BeginConnect(); return true; }
 
         public override void Send(ulong clientId, ArraySegment<byte> data, NetworkDelivery _)
-            => _inner?.SendRaw(RelayMessage.Data(clientId, data).Encode());
+            => _inner?.SendRaw(RelayMessage.DataMessage(clientId, data).Encode());
 
         /// <summary>
         /// Server-side fanout: one call delivers to ALL peers.

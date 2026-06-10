@@ -82,12 +82,12 @@ namespace OpenRelay.Protocol
 
         // ── Factory methods for common message types ───────────────────────────
 
-        public static RelayMessage Data(ulong target, ArraySegment<byte> payload)
+        public static RelayMessage DataMessage(ulong target, ArraySegment<byte> payload)
             => new(RelayMessageType.Data, target, payload);
 
         /// <summary>
         /// Server-side broadcast: the relay fans this out to all peers.
-        /// Use instead of N individual Data() calls on the host — O(1) bandwidth.
+        /// Use instead of N individual DataMessage() calls on the host — O(1) bandwidth.
         /// </summary>
         public static RelayMessage Broadcast(ArraySegment<byte> payload)
             => new(RelayMessageType.DataBroadcast, 0, payload);

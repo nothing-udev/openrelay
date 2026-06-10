@@ -5,7 +5,8 @@
   "description": "Self-hosted Unity Relay alternative. Supports WebSocket and UDP. No per-CCU cost.",
   "unity": "2022.3",
   "dependencies": {
-    "com.unity.netcode.gameobjects": "1.0.0"
+    "com.unity.netcode.gameobjects": "1.0.0",
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm"
   },
   "keywords": ["relay", "multiplayer", "netcode", "websocket", "udp"],
   "author": { "name": "VADE" }
