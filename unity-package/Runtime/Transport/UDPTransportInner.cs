@@ -106,7 +106,7 @@ namespace OpenRelay.Transport
         public async Task RunAsync(CancellationToken ct)
         {
             _serverEP = await ResolveEndpointAsync(_endpoint, ct);
-            _udp      = new UdpClient();
+            _udp = new UdpClient(_serverEP.AddressFamily);
             _udp.Connect(_serverEP);
 
             Debug.Log($"[OpenRelay][UDP] Handshaking → {_serverEP}  code={_joinCode}");
