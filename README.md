@@ -174,7 +174,7 @@ OpenRelay's `package.json` currently references:
 {
   "dependencies": {
     "com.unity.netcode.gameobjects": "2.6.0",
-    "com.endel.nativewebsocket": "1.1.6"
+    "com.endel.nativewebsocket": "https://github.com/endel/NativeWebSocket.git#upm"
   }
 }
 ```
