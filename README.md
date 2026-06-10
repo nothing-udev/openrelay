@@ -52,16 +52,16 @@ Deploy on your own VPS, pay nothing per concurrent user, own your infrastructure
 │                                                                         │
 │  :7778  HTTP API + /metrics                                             │
 │ ┌──────────────────────────┐                                            │
-│ │  PUT  /sessions/create   │  ← rate-limited per IP                    │
+│ │  PUT  /sessions/create   │  ← rate-limited per IP                     │
 │ │  POST /sessions/join     │                                            │
 │ │  GET  /health            │                                            │
-│ │  GET  /metrics           │  ← Prometheus scrape                      │
+│ │  GET  /metrics           │  ← Prometheus scrape                       │
 │ └───────────┬──────────────┘                                            │
 │             │                                                           │
 │  :7777 WebSocket (TCP)              :7779 UDP                           │
 │ ┌───────────┴──────────────────────────────────────┐                    │
-│ │              Manager  (sync.RWMutex)              │                    │
-│ │         map[joinCode] → *Session                  │                    │
+│ │              Manager  (sync.RWMutex)             │                    │
+│ │         map[joinCode] → *Session                 │                    │
 │ └──────────────────────┬───────────────────────────┘                    │
 │                        │                                                │
 │             ┌──────────▼───────────┐                                    │
@@ -74,26 +74,26 @@ Deploy on your own VPS, pay nothing per concurrent user, own your infrastructure
 ### Connection lifecycle
 
 ```
-Host                    OpenRelay Server              Client
-  │                          │                           │
-  │── PUT /sessions/create ──►│                           │
-  │◄── { joinCode:"A3F9KZ" } ─│                           │
-  │                          │                           │
-  │── WS /relay?code=A3F9KZ ──►│  (or UDP Handshake)      │
-  │◄── ReliableEnv(Connected(0))│                          │
-  │──── Ack ─────────────────►│                           │
-  │                          │◄── POST /sessions/join ───│
-  │                          │◄── UDP Handshake(A3F9KZ) ─│
-  │                          │─── UDPHandshakeAck(id=1) ─►│
-  │                          │─── ReliableEnv(Connected(0)) ──►│
-  │◄── ReliableEnv(Connected(1)) │◄──── Ack ─────────────│
-  │──── Ack ─────────────────►│                           │
-  │                          │                           │
-  │── DataBroadcast(payload) ─►│                           │
-  │                          │──── Data(from=0) ─────────►│  fanout
-  │── Data(to=1, payload) ────►│                           │
-  │                          │──── Data(from=0) ─────────►│
-  │◄── Data(from=1) ──────────│◄─── Data(to=0) ────────── │
+Host                    OpenRelay Server                    Client
+  │                             │                              │
+  │── PUT /sessions/create ────►│                              │
+  │◄── { joinCode:"A3F9KZ" } ───│                              │
+  │                             │                              │
+  │── WS /relay?code=A3F9KZ ───►│   (or UDP Handshake)         │
+  │◄── ReliableEnv(Connected(0))│                              │
+  │──── Ack ───────────────────►│                              │
+  │                             │◄── POST /sessions/join ──────│
+  │                             │◄── UDP Handshake(A3F9KZ) ────│
+  │                             │─── UDPHandshakeAck(id=1) ───►│
+  │                             │─ ReliableEnv(Connected(0)) ─►│
+  │◄── ReliableEnv(Connected(1))│◄─────────── Ack ─────────────│
+  │──── Ack ───────────────────►│                              │
+  │                             │                              │
+  │── DataBroadcast(payload) ──►│                              │
+  │                             │────── Data(from=0) ─────────►│  fanout
+  │── Data(to=1, payload) ─────►│                              │
+  │                             │────── Data(from=0) ─────────►│
+  │◄── Data(from=1) ────────────│◄────── Data(to=0) ────────── │
 ```
 
 ### Why UDP instead of raw custom protocol?
@@ -196,7 +196,7 @@ Every message — WebSocket frames and UDP datagrams — uses the same 9-byte he
 ```
 Byte  0        1       2       3       4       5       6       7       8      9…
      ┌────────┬───────┬───────┬───────┬───────┬───────┬───────┬───────┬──────┬────┐
-     │  Type  │              AuthorClientId  (uint64, big-endian)             │Data│
+     │  Type  │              AuthorClientId  (uint64, big-endian)            │Data│
      └────────┴───────┴───────┴───────┴───────┴───────┴───────┴───────┴──────┴────┘
 ```
 
@@ -355,5 +355,3 @@ curl -XPUT http://localhost:7778/api/v1/sessions/create
 ```
 
 ---
-
-# Code documented by AI agents.
