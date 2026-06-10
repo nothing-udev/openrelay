@@ -151,8 +151,6 @@ curl http://YOUR_SERVER_IP:7778/health
 }
 ```
 
-## Dependencies
-
 OpenRelay automatically installs its required dependencies via UPM:
 
 - **Unity Netcode for GameObjects**
