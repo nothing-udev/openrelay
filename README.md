@@ -1,6 +1,6 @@
 <div align="center">
 
-# OpenRelay by VADE (nothing)
+# OpenRelay by nothing
 
 **Self-hosted Unity Relay. WebSocket + UDP. Zero per-CCU cost.**
 
