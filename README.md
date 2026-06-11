@@ -174,6 +174,39 @@ All rate-limited events are counted in `openrelay_rate_limited_total{source}`.
 
 ### 1 — Deploy the server
 
+**Using the pre-built image (recommended):**
+
+```bash
+# Create a working directory on your VPS
+mkdir openrelay && cd openrelay
+
+# Download docker-compose and config files
+curl -O https://raw.githubusercontent.com/nothing-udev/openrelay/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/nothing-udev/openrelay/main/prometheus.yml
+```
+
+Create `.env` next to `docker-compose.yml`:
+```bash
+OPENRELAY_IMAGE=ghcr.io/nothing-udev/openrelay:latest
+OPENRELAY_PUBLIC_HOST=YOUR_SERVER_IP:7777
+OPENRELAY_UDP_PUBLIC_ADDR=YOUR_SERVER_IP:7779
+# OPENRELAY_HMAC_SECRET=change-this-to-a-long-random-string
+```
+
+```bash
+docker compose pull
+docker compose up -d
+
+curl http://YOUR_SERVER_IP:7778/health
+# → {"status":"ok","sessions":0,"clients":0,"transports":["websocket","udp"]}
+```
+
+**To update to a newer image:**
+```bash
+docker compose pull && docker compose up -d
+```
+
+**Building from source** (if you fork or modify the server):
 ```bash
 git clone https://github.com/nothing-udev/openrelay.git
 cd openrelay
@@ -189,7 +222,8 @@ environment:
 ```
 
 ```bash
-docker compose up -d
+# leave OPENRELAY_IMAGE unset — docker-compose will build locally
+docker compose up -d --build
 
 curl http://YOUR_SERVER_IP:7778/health
 # → {"status":"ok","sessions":0,"clients":0,"transports":["websocket","udp"]}
@@ -438,10 +472,27 @@ Grafana at `:3000` (default password: `changeme`) is pre-configured to scrape Op
 
 ---
 
+## CI/CD
+
+`.github/workflows/docker-publish.yml` runs on every push:
+
+| Event | Result |
+|---|---|
+| Push to `main` | `ghcr.io/…/openrelay:latest` + `:sha-abc1234` |
+| Push tag `v1.2.3` | `:1.2.3` + `:1.2` + `:1` + `:latest` |
+| Pull Request | Build only — no push, catches Dockerfile breakage early |
+
+Requires **Settings → Actions → General → Workflow permissions → Read and write** in the repository (one-time setup). No secrets needed — uses the built-in `GITHUB_TOKEN`.
+
+---
+
 ## Repository structure
 
 ```
 openrelay/
+├── .github/
+│   └── workflows/
+│       └── docker-publish.yml        Build + push to ghcr.io on push/tag
 ├── server/                           Go server
 │   ├── cmd/openrelay/main.go         Startup: WS + UDP + API + TLS + graceful shutdown
 │   ├── internal/
