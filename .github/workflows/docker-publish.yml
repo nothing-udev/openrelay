@@ -1,9 +1,8 @@
 name: Docker
 
-# Triggers:
-#   push main     → ghcr.io/OWNER/openrelay:latest  +  :sha-abc1234
-#   push v1.2.3   → ghcr.io/OWNER/openrelay:1.2.3   +  :1.2  +  :1  +  :latest
-#   pull_request  → build only (no push) — verifies the Dockerfile compiles
+# Pull Request  →  check → build          (no push)
+# Push main     →  check → build → publish (:latest + :sha-…)
+# Push v1.2.3   →  check → build → publish (:1.2.3 + :1.2 + :1 + :latest)
 
 on:
   push:
@@ -14,41 +13,70 @@ on:
 
 env:
   REGISTRY:   ghcr.io
-  IMAGE_NAME: ${{ github.repository }} 
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push:
+
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file:        server/go.mod
+          cache-dependency-path:  server/go.sum   
+
+      - name: go vet
+        run:  go vet ./...
+        working-directory: server
+
+      - name: go build
+        run:  go build ./...
+        working-directory: server
+
+  build:
+    name: Build
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context:    ./server
+          platforms:  linux/amd64,linux/arm64
+          push:       false
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+  publish:
+    name: Publish
+    needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
-      packages: write  
+      packages: write   
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      #   Branch push (main):
-      #     :latest
-      #     :sha-abc1234
-      #
-      #   Tag push (v1.2.3):
-      #     :1.2.3   (full semver)
-      #     :1.2     (minor)
-      #     :1       (major)
-      #     :latest
-
-      - name: Extract Docker metadata
+      - name: Extract metadata (tags + OCI labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -60,12 +88,12 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
-      - name: Build and push image
+      - name: Push image
         uses: docker/build-push-action@v5
         with:
           context:    ./server
           platforms:  linux/amd64,linux/arm64
-          push:       ${{ github.event_name != 'pull_request' }}
+          push:       true
           tags:       ${{ steps.meta.outputs.tags }}
           labels:     ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
