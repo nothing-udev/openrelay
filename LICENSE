@@ -1,21 +1,67 @@
-MIT License
+PolyForm Small Business License 1.0.0
 
-Copyright (c) 2026 nothing
+Copyright (c) 2026 by nothing
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+---
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Acceptance
+
+By using, copying, modifying, or distributing this software (the "Software"),
+you agree to all terms and conditions of this license.
+
+---
+
+2. Copyright License
+
+The licensor grants you a copyright license to use, copy, modify, and create
+derivative works of the Software for permitted purposes.
+
+---
+
+3. Distribution
+
+You may distribute copies of the Software, including modified versions,
+provided you comply with this license.
+
+---
+
+4. Permitted Purpose (Small Business Restriction)
+
+You may use the Software for commercial or non-commercial purposes only if:
+
+- Your organization has fewer than 100 individuals (employees + contractors), AND
+- Your organization has less than $1,000,000 USD annual revenue (or equivalent)
+
+---
+
+5. Restrictions
+
+You may NOT:
+
+- Sell the Software itself (source code or substantial parts of it) as a product
+- Redistribute the Software as a standalone source code offering for payment
+- Remove or alter license notices
+
+---
+
+6. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+---
+
+7. Liability
+
+IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY.
+
+---
+
+8. Termination
+
+If you violate this license and fail to fix the violation within 30 days
+of notice, your rights under this license end immediately.
+
+---
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY.
