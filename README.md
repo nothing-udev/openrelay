@@ -118,7 +118,7 @@ Client                          Server
   │◄── Connected ─────────────────│   ✓ reconnected, counter resets
   │                               │
   │  [another drop after 10 s+]   │   stable session → counter resets
-  │  wait 2 s, 4 s, 8 s…         │   exponential back-off, cap 30 s
+  │   wait 2 s, 4 s, 8 s…         │   exponential back-off, cap 30 s
   │  × 5 attempts → TransportFailure
 ```
 
@@ -486,15 +486,12 @@ cd openrelay/server
 
 # Run both transports locally (no auth, no TLS)
 OPENRELAY_TRANSPORT=both \
-OPENRELAY_PUBLIC_HOST=localhost:7777 \
-OPENRELAY_UDP_PUBLIC_ADDR=localhost:7779 \
-  go run ./cmd/openrelay
-
 # With auth enabled
 OPENRELAY_HMAC_SECRET=dev-secret \
 OPENRELAY_PUBLIC_HOST=localhost:7777 \
 OPENRELAY_UDP_PUBLIC_ADDR=localhost:7779 \
   go run ./cmd/openrelay
+
 
 # Verify
 curl http://localhost:7778/health
