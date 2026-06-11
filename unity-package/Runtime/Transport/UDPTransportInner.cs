@@ -4,9 +4,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using OpenRelay.Protocol;
 using Unity.Netcode;
 using UnityEngine;
+using OpenRelay.Protocol;
 
 namespace OpenRelay.Transport
 {
