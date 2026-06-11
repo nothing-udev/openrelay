@@ -119,7 +119,7 @@ Client                          Server
   │                               │
   │  [another drop after 10 s+]   │   stable session → counter resets
   │   wait 2 s, 4 s, 8 s…         │   exponential back-off, cap 30 s
-  │  × 5 attempts → TransportFailure
+  │× 5 attempts → TransportFailure│
 ```
 
 ---
