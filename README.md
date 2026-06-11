@@ -550,3 +550,15 @@ curl -XPUT http://localhost:7778/api/v1/sessions/create
 ```
 
 ---
+
+<div align="center">
+
+<a href="https://discord.gg/HZsxRXQe">
+  <img src="https://i.ibb.co/RkBN8PFv/discord-banner.png" alt="OpenRelay Banner" width="100%" style="border-radius: 8px; margin-bottom: 20px;" />
+</a>
+
+**Join our Discord community for support and templates.**
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/HZsxRXQe)
+
+
+</div>
