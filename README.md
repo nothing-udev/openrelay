@@ -7,6 +7,7 @@
 [![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![UDP](https://img.shields.io/badge/UDP-low%20latency-orange?style=flat-square)](#transports)
 [![Prometheus](https://img.shields.io/badge/metrics-Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)](https://prometheus.io)
+[![Grafana](https://img.shields.io/badge/visualization-Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)](https://grafana.com)
 [![License: PolyForm Small Business](https://img.shields.io/badge/License-PolyForm%20Small%20Business-0ea5e9?style=flat-square)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Unity 2022.3+](https://img.shields.io/badge/Unity-2022.3+-000?style=flat-square&logo=unity)](https://unity.com)
