@@ -4,7 +4,7 @@
 
 **Self-hosted Unity Relay. WebSocket + UDP. Zero per-CCU cost.**
 
-[![Go 1.23+](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
+[![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![UDP](https://img.shields.io/badge/UDP-low%20latency-orange?style=flat-square)](#transports)
 [![Prometheus](https://img.shields.io/badge/metrics-Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)](https://prometheus.io)
 [![License: PolyForm Small Business](https://img.shields.io/badge/License-PolyForm%20Small%20Business-0ea5e9?style=flat-square)](LICENSE)
