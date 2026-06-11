@@ -7,7 +7,7 @@
 [![Go 1.21+](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![UDP](https://img.shields.io/badge/UDP-low%20latency-orange?style=flat-square)](#transports)
 [![Prometheus](https://img.shields.io/badge/metrics-Prometheus-E6522C?style=flat-square&logo=prometheus&logoColor=white)](https://prometheus.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
+[![License: PSBL](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)](LICENSE)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Unity 2022.3+](https://img.shields.io/badge/Unity-2022.3+-000?style=flat-square&logo=unity)](https://unity.com)
 [![Netcode for GameObjects](https://img.shields.io/badge/Netcode-NGO-black?style=flat-square&logo=unity)](https://docs.unity3d.com/Packages/com.unity.netcode.gameobjects@latest)
