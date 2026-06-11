@@ -29,10 +29,15 @@ func main() {
 	if len(cfg.Relay.HMACSecret) > 0 {
 		authStatus = "enabled"
 	}
+	tlsStatus := "disabled"
+	if cfg.TLSEnabled() {
+		tlsStatus = "enabled (cert: " + cfg.TLSCertFile + ")"
+	}
 	log.Info().
 		Str("transport", cfg.Transport).
 		Str("api", cfg.APIAddr).
 		Str("hmac_auth", authStatus).
+		Str("tls", tlsStatus).
 		Msg("OpenRelay starting")
 
 	rootCtx, rootCancel := context.WithCancel(context.Background())
@@ -49,6 +54,7 @@ func main() {
 		mgr, metrics,
 		cfg.PublicWSHost, cfg.PublicUDPAddr,
 		cfg.WSEnabled(), cfg.UDPEnabled(),
+		cfg.TLSEnabled(),
 		cfg.Relay.HMACSecret,
 		log,
 	).RegisterRoutes(apiRouter)
@@ -74,8 +80,17 @@ func main() {
 		r.HandleFunc("/relay", mgr.ServeWebSocket)
 		wsSrv = &http.Server{Addr: cfg.WSAddr, Handler: r}
 		go func() {
-			log.Info().Str("addr", cfg.WSAddr).Msg("WebSocket relay listening")
-			if err := wsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Info().
+				Str("addr", cfg.WSAddr).
+				Bool("tls", cfg.TLSEnabled()).
+				Msg("WebSocket relay listening")
+			var err error
+			if cfg.TLSEnabled() {
+				err = wsSrv.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
+			} else {
+				err = wsSrv.ListenAndServe()
+			}
+			if err != nil && err != http.ErrServerClosed {
 				log.Fatal().Err(err).Msg("WebSocket server failed")
 			}
 		}()

@@ -41,6 +41,7 @@ type Handler struct {
 	publicUDPAddr string
 	wsEnabled     bool
 	udpEnabled    bool
+	tlsEnabled    bool   // when true, WsEndpoint uses wss:// scheme
 	hmacSecret    []byte // nil or empty = auth disabled
 	log           zerolog.Logger
 
@@ -52,6 +53,7 @@ func NewHandler(
 	metrics *relay.Metrics,
 	publicWSHost, publicUDPAddr string,
 	wsEnabled, udpEnabled bool,
+	tlsEnabled bool,
 	hmacSecret []byte,
 	log zerolog.Logger,
 ) *Handler {
@@ -62,6 +64,7 @@ func NewHandler(
 		publicUDPAddr: publicUDPAddr,
 		wsEnabled:     wsEnabled,
 		udpEnabled:    udpEnabled,
+		tlsEnabled:    tlsEnabled,
 		hmacSecret:    hmacSecret,
 		log:           log,
 	}
@@ -188,7 +191,7 @@ func extractIP(r *http.Request) string {
 func (h *Handler) buildInfo(code string, peerCount int) SessionInfo {
 	info := SessionInfo{JoinCode: code, PeerCount: peerCount}
 	if h.wsEnabled {
-		info.WsEndpoint = "ws://" + h.publicWSHost + "/relay"
+		info.WsEndpoint = wsScheme(h.tlsEnabled) + h.publicWSHost + "/relay"
 	}
 	if h.udpEnabled {
 		info.UDPEndpoint = h.publicUDPAddr
@@ -213,4 +216,12 @@ func (h *Handler) writeJSON(w http.ResponseWriter, status int, v any) {
 
 func (h *Handler) writeError(w http.ResponseWriter, status int, msg string) {
 	h.writeJSON(w, status, map[string]string{"error": msg})
+}
+
+// wsScheme returns "wss://" when TLS is active, "ws://" otherwise.
+func wsScheme(tls bool) string {
+	if tls {
+		return "wss://"
+	}
+	return "ws://"
 }

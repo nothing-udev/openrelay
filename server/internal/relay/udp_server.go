@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/openrelay/openrelay/internal/auth"
 	"github.com/openrelay/openrelay/internal/protocol"
 	"github.com/rs/zerolog"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -42,6 +44,8 @@ type UDPServer struct {
 	peers   sync.Map // string(addr) → *UDPPeer
 	workCh  chan udpPacket
 	bufPool sync.Pool
+
+	handshakeLimiters sync.Map // string(IP) → *rate.Limiter  (5 handshakes/s, burst 10)
 }
 
 // NewUDPServer creates a UDPServer bound to addr (e.g. ":7779").
@@ -192,8 +196,41 @@ func (s *UDPServer) handleHandshake(addr *net.UDPAddr, data []byte) {
 	if err != nil || len(msg.Data) == 0 {
 		return
 	}
-	joinCode := string(msg.Data)
+
+	// ── Per-IP rate limit (5 handshakes/s, burst 10) ─────────────────────
+	// Keyed by IP (not IP:port) so rotating ephemeral ports don't bypass it.
+	// Drop silently — sending an error reply would enable UDP amplification.
+	if !s.handshakeLimiterFor(addr.IP.String()).Allow() {
+		s.log.Warn().Str("ip", addr.IP.String()).Msg("UDP handshake rate limited")
+		if s.metrics != nil {
+			s.metrics.RateLimited.WithLabelValues("udp").Inc()
+		}
+		return
+	}
+
+	// Parse "joinCode\ntoken" (new) or just "joinCode" (legacy / auth disabled).
+	// The '\n' delimiter is safe: join codes are A-Z0-9, tokens are "ts.hex".
+	payload := string(msg.Data)
+	joinCode := payload
+	token := ""
+	if i := strings.IndexByte(payload, '\n'); i >= 0 {
+		joinCode = payload[:i]
+		token = payload[i+1:]
+	}
 	addrStr := addr.String()
+
+	// ── HMAC token validation ──────────────────────────────────────────────
+	// ValidateToken is a no-op (returns true) when HMACSecret is empty,
+	// so existing unauthed deployments keep working without any config change.
+	if !auth.ValidateToken(s.manager.cfg.HMACSecret, joinCode, token) {
+		s.log.Warn().Str("code", joinCode).Str("addr", addrStr).Msg("UDP token rejected")
+		if s.metrics != nil {
+			s.metrics.RateLimited.WithLabelValues("udp_auth").Inc()
+		}
+		_, _ = s.conn.WriteToUDP(
+			protocol.UDPHandshakeErrorMessage(protocol.UDPErrInvalidToken).Encode(), addr)
+		return
+	}
 
 	// Idempotent re-handshake: resend ack if the peer is already live.
 	if v, ok := s.peers.Load(addrStr); ok {
@@ -268,6 +305,18 @@ func (s *UDPServer) reapTimedOut() {
 		}
 		return true
 	})
+}
+
+// handshakeLimiterFor returns (creating if needed) the per-IP rate limiter for
+// UDP handshake packets. Keyed by IP without port so ephemeral port cycling
+// cannot bypass the limit.
+func (s *UDPServer) handshakeLimiterFor(ip string) *rate.Limiter {
+	if v, ok := s.handshakeLimiters.Load(ip); ok {
+		return v.(*rate.Limiter)
+	}
+	lim := rate.NewLimiter(5, 10)
+	actual, _ := s.handshakeLimiters.LoadOrStore(ip, lim)
+	return actual.(*rate.Limiter)
 }
 
 func isUDPClosedErr(err error) bool {

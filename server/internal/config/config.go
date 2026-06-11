@@ -25,7 +25,20 @@ type Server struct {
 
 	APIAddr string // ":7778"
 
+	// TLS for the WebSocket relay (makes ws:// → wss://).
+	// Set both to enable; leave empty for plain HTTP (default).
+	// Works out of the box with Let's Encrypt certbot paths:
+	//   OPENRELAY_TLS_CERT=/etc/letsencrypt/live/my.domain/fullchain.pem
+	//   OPENRELAY_TLS_KEY=/etc/letsencrypt/live/my.domain/privkey.pem
+	TLSCertFile string // OPENRELAY_TLS_CERT
+	TLSKeyFile  string // OPENRELAY_TLS_KEY
+
 	Relay relay.Config
+}
+
+// TLSEnabled returns true when both cert and key paths are configured.
+func (s Server) TLSEnabled() bool {
+	return s.TLSCertFile != "" && s.TLSKeyFile != ""
 }
 
 func (s Server) WSEnabled() bool {
@@ -54,6 +67,8 @@ func Load() Server {
 		UDPAddr:       envStr("OPENRELAY_UDP_ADDR", ":7779"),
 		PublicUDPAddr: envStr("OPENRELAY_UDP_PUBLIC_ADDR", "localhost:7779"),
 		APIAddr:       envStr("OPENRELAY_API_ADDR", ":7778"),
+		TLSCertFile:   envStr("OPENRELAY_TLS_CERT", ""),
+		TLSKeyFile:    envStr("OPENRELAY_TLS_KEY", ""),
 		Relay: relay.Config{
 			MaxSessions:        envInt("OPENRELAY_MAX_SESSIONS", 200),
 			MaxPeersPerSession: envInt("OPENRELAY_MAX_PEERS", 16),

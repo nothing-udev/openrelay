@@ -4,13 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/openrelay/openrelay/internal/auth"
 	"github.com/rs/zerolog"
+	"golang.org/x/time/rate"
 )
 
 // Config holds tunable relay parameters.
@@ -40,6 +43,8 @@ type Manager struct {
 
 	mu       sync.RWMutex
 	sessions map[string]*Session
+
+	wsLimiters sync.Map // string(IP) → *rate.Limiter  (5 conn/s, burst 10)
 }
 
 // NewManager creates a Manager. Call Start(ctx) after server startup to run
@@ -109,6 +114,17 @@ func (m *Manager) AllSessions() []*Session {
 // If HMAC auth is enabled, the ?token= query parameter is validated before
 // the upgrade — so invalid clients never touch the WebSocket state machine.
 func (m *Manager) ServeWebSocket(w http.ResponseWriter, r *http.Request) {
+	// ── Per-IP rate limit (5 new WS connections/s, burst 10) ────────────────
+	ip := extractClientIP(r)
+	if !m.wsLimiterFor(ip).Allow() {
+		m.log.Warn().Str("ip", ip).Msg("WS connect rate limited")
+		if m.metrics != nil {
+			m.metrics.RateLimited.WithLabelValues("ws").Inc()
+		}
+		http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
+		return
+	}
+
 	q := r.URL.Query()
 	code := q.Get("code")
 	if code == "" {
@@ -140,6 +156,31 @@ func (m *Manager) ServeWebSocket(w http.ResponseWriter, r *http.Request) {
 	if err := sess.JoinWS(conn); err != nil {
 		m.log.Warn().Err(err).Str("code", code).Msg("WS join rejected")
 	}
+}
+
+// wsLimiterFor returns (creating if needed) the per-IP rate limiter for WS connects.
+func (m *Manager) wsLimiterFor(ip string) *rate.Limiter {
+	if v, ok := m.wsLimiters.Load(ip); ok {
+		return v.(*rate.Limiter)
+	}
+	lim := rate.NewLimiter(5, 10)
+	actual, _ := m.wsLimiters.LoadOrStore(ip, lim)
+	return actual.(*rate.Limiter)
+}
+
+// extractClientIP returns the originating IP, honouring X-Forwarded-For when present.
+func extractClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			return strings.TrimSpace(xff[:i])
+		}
+		return strings.TrimSpace(xff)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
 }
 
 func (m *Manager) deleteSession(code string) {

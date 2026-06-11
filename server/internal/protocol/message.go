@@ -38,7 +38,11 @@ const (
 	// ── UDP transport: session handshake ───────────────────────────────────
 
 	// MessageTypeUDPHandshake is the first packet a UDP client sends.
-	//   Direction: client→server. Data = UTF-8 join code.
+	//   Direction: client→server.
+	//   Data = UTF-8 "joinCode\ntoken" — token is empty string when auth is disabled.
+	//   Server splits on '\n': first part = joinCode, second = HMAC token.
+	//   Backward compat: if no '\n' in Data, whole payload is treated as joinCode
+	//   with an empty token (accepted only when OPENRELAY_HMAC_SECRET is unset).
 	MessageTypeUDPHandshake MessageType = 0xF0
 
 	// MessageTypeUDPHandshakeAck confirms a successful join.
@@ -84,6 +88,7 @@ type UDPErrorCode uint64
 const (
 	UDPErrSessionNotFound UDPErrorCode = 1
 	UDPErrSessionFull     UDPErrorCode = 2
+	UDPErrInvalidToken    UDPErrorCode = 3
 )
 
 // ── Wire format ────────────────────────────────────────────────────────────────

@@ -46,6 +46,14 @@ namespace OpenRelay.Transport
         public float ConnectTimeoutSeconds = 10f;
         public int   WsReceiveBufferSize   = 65536;
 
+        [Header("Reconnect")]
+        [Tooltip("Automatically retry on unexpected disconnects. Hosts never reconnect (their session is destroyed).")]
+        public bool  AutoReconnect         = true;
+        [Tooltip("Maximum reconnect attempts before raising TransportFailure.")]
+        public int   MaxReconnectAttempts  = 5;
+        [Tooltip("Base delay between attempts in seconds (doubles each try, capped at 30 s).")]
+        public float ReconnectDelaySeconds = 2f;
+
         [Header("Session (populated at runtime)")]
         public string JoinCode    = "";
         public string WsEndpoint  = "";
@@ -60,12 +68,13 @@ namespace OpenRelay.Transport
         {
             _cts?.Cancel();
             _cts?.Dispose();
-            _cts   = new CancellationTokenSource();
-            _queue = new ConcurrentQueue<RelayEvent>();
+            _cts               = new CancellationTokenSource();
+            _queue             = new ConcurrentQueue<RelayEvent>();
+            _reconnectAttempts = 0;
         }
 
-        public override bool StartServer() { BeginConnect(); return true; }
-        public override bool StartClient() { BeginConnect(); return true; }
+        public override bool StartServer() { _isHost = true;  BeginConnect(); return true; }
+        public override bool StartClient() { _isHost = false; BeginConnect(); return true; }
 
         public override void Send(ulong clientId, ArraySegment<byte> data, NetworkDelivery _)
             => _inner?.SendRaw(RelayMessage.DataMessage(clientId, data).Encode());
@@ -145,7 +154,9 @@ namespace OpenRelay.Transport
         private CancellationTokenSource     _cts;
         private ITransportInner             _inner;
         private RelayTransportMode          _activeMode;
-        private string                      _token = ""; 
+        private string                      _token = "";
+        private bool                        _isHost;
+        private int                         _reconnectAttempts;
 
         private void ApplySessionInfo(SessionInfo info)
         {
@@ -179,33 +190,107 @@ namespace OpenRelay.Transport
             _ = Task.Run(() => ConnectAsync(_cts?.Token ?? CancellationToken.None));
         }
 
+        /// <summary>Creates the appropriate inner transport based on the current session info.</summary>
+        private ITransportInner CreateInner() =>
+            _activeMode == RelayTransportMode.UDPOnly
+                ? (ITransportInner)new UDPTransportInner(
+                    UdpEndpoint, JoinCode, _token, ConnectTimeoutSeconds, Enqueue)
+                : new WSTransportInner(
+                    WsEndpoint, JoinCode, _token,
+                    ConnectTimeoutSeconds, WsReceiveBufferSize, Enqueue);
+
         private async Task ConnectAsync(CancellationToken ct)
         {
-            try
+            // Bootstrap: if ApplySessionInfo was never called (manual endpoint setup),
+            // build session info from the inspector fields.
+            if (_activeMode == default)
+                ApplySessionInfo(new SessionInfo
+                {
+                    joinCode    = JoinCode,
+                    wsEndpoint  = WsEndpoint,
+                    udpEndpoint = UdpEndpoint,
+                    token       = _token,
+                });
+
+            _reconnectAttempts = 0;
+
+            while (!ct.IsCancellationRequested)
             {
-                if (_activeMode == default)
-                    ApplySessionInfo(new SessionInfo
+                bool isRetry = _reconnectAttempts > 0;
+
+                try
+                {
+                    // On retry: fetch a fresh token — the original expires in 5 min.
+                    // Hosts don't retry (server-side session is gone on host disconnect).
+                    if (isRetry)
                     {
-                        joinCode    = JoinCode,
-                        wsEndpoint  = WsEndpoint,
-                        udpEndpoint = UdpEndpoint,
-                        token       = _token,
-                    });
+                        Debug.Log($"[OpenRelay] Reconnect attempt {_reconnectAttempts}/{MaxReconnectAttempts}…");
+                        var fresh = await OpenRelayApiClient.JoinSessionAsync(ApiBaseUrl, JoinCode);
+                        ApplySessionInfo(fresh);
+                    }
 
-                _inner = _activeMode == RelayTransportMode.UDPOnly
-                    ? (ITransportInner)new UDPTransportInner(
-                        UdpEndpoint, JoinCode, ConnectTimeoutSeconds, Enqueue)
-                    : new WSTransportInner(
-                        WsEndpoint, JoinCode, _token,
-                        ConnectTimeoutSeconds, WsReceiveBufferSize, Enqueue);
+                    _inner?.Close();
+                    _inner = CreateInner();
 
-                await _inner.RunAsync(ct);
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[OpenRelay] Error: {ex.Message}");
-                Enqueue(NetworkEvent.TransportFailure, 0, null);
+                    // Track connect time to reset counter after a stable session.
+                    var connectedAt = DateTime.UtcNow;
+                    await _inner.RunAsync(ct);
+
+                    // If we were stably connected (≥ 10 s), treat the next drop
+                    // as a fresh reconnect sequence rather than continuing the count.
+                    if ((DateTime.UtcNow - connectedAt).TotalSeconds >= 10)
+                        _reconnectAttempts = 0;
+                }
+                catch (OperationCanceledException) { return; }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"[OpenRelay] {(isRetry ? "Reconnect" : "Connect")} error: {ex.Message}");
+                }
+
+                if (ct.IsCancellationRequested) return;
+
+                // ── Was this an explicit kick? ───────────────────────────────
+                // Kicks are intentional — don't retry, just report disconnect.
+                if (_inner?.WasKicked == true)
+                {
+                    Debug.Log("[OpenRelay] Kicked by host — not reconnecting.");
+                    Enqueue(NetworkEvent.Disconnect, 0, null);
+                    return;
+                }
+
+                // ── Hosts never reconnect ────────────────────────────────────
+                // Their session is destroyed the moment they disconnect;
+                // reconnecting would create a ghost peer, not restore the room.
+                if (_isHost)
+                {
+                    Enqueue(NetworkEvent.Disconnect, 0, null);
+                    return;
+                }
+
+                // ── Auto-reconnect disabled ──────────────────────────────────
+                if (!AutoReconnect)
+                {
+                    Enqueue(NetworkEvent.Disconnect, 0, null);
+                    return;
+                }
+
+                // ── Retry budget exhausted ───────────────────────────────────
+                _reconnectAttempts++;
+                if (_reconnectAttempts > MaxReconnectAttempts)
+                {
+                    Debug.LogError($"[OpenRelay] Gave up after {MaxReconnectAttempts} reconnect attempts.");
+                    Enqueue(NetworkEvent.TransportFailure, 0, null);
+                    return;
+                }
+
+                // Exponential back-off: 2 s → 4 s → 8 s → 16 s → 30 s cap.
+                float delaySec = Mathf.Min(
+                    ReconnectDelaySeconds * Mathf.Pow(2f, _reconnectAttempts - 1f), 30f);
+                Debug.LogWarning(
+                    $"[OpenRelay] Disconnected. Retry {_reconnectAttempts}/{MaxReconnectAttempts} in {delaySec:F0}s…");
+
+                try { await Task.Delay(TimeSpan.FromSeconds(delaySec), ct); }
+                catch (OperationCanceledException) { return; }
             }
         }
 
@@ -225,6 +310,8 @@ namespace OpenRelay.Transport
     internal interface ITransportInner
     {
         ulong LastRttMs { get; }
+        /// <summary>True when the server explicitly kicked this peer (not a network drop).</summary>
+        bool  WasKicked { get; }
         void  SendRaw(byte[] data);
         void  Close();
         Task  RunAsync(CancellationToken ct);

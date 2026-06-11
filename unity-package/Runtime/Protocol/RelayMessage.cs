@@ -31,6 +31,7 @@ namespace OpenRelay.Protocol
     {
         SessionNotFound = 1,
         SessionFull     = 2,
+        InvalidToken    = 3,
     }
 
     /// <summary>
@@ -95,9 +96,18 @@ namespace OpenRelay.Protocol
         public static RelayMessage Kick(ulong target)
             => new(RelayMessageType.KickFromRelay, target);
 
-        public static RelayMessage UDPHandshake(string joinCode)
+        /// <summary>
+        /// Builds a UDP handshake packet.
+        /// Wire format: "joinCode\ntoken" — server splits on '\n'.
+        /// When token is empty (auth disabled), payload is just "joinCode"
+        /// for backward compatibility with servers that don't check tokens.
+        /// </summary>
+        public static RelayMessage UDPHandshake(string joinCode, string token = "")
         {
-            var bytes = Encoding.UTF8.GetBytes(joinCode);
+            var payload = string.IsNullOrEmpty(token)
+                ? joinCode
+                : joinCode + "\n" + token;
+            var bytes = Encoding.UTF8.GetBytes(payload);
             return new(RelayMessageType.UDPHandshake, 0, new ArraySegment<byte>(bytes));
         }
 

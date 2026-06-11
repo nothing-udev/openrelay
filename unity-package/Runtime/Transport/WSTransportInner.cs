@@ -39,6 +39,11 @@ namespace OpenRelay.Transport
         private TaskCompletionSource<bool> _closeTcs;
 
         public ulong LastRttMs => _lastRttMs;
+        /// <summary>
+        /// Always false for WebSocket — the server kicks by closing the socket,
+        /// so a kick is indistinguishable from a network drop at this level.
+        /// </summary>
+        public bool WasKicked => false;
 
         public WSTransportInner(
             string endpoint, string joinCode, string token,
@@ -141,9 +146,9 @@ namespace OpenRelay.Transport
         private void OnClose(WebSocketCloseCode code)
         {
             Debug.Log($"[OpenRelay][WS] Closed ({code})");
-            // Notify NGO only when the close was unexpected (not from our Close()).
-            if (_closeFlag == 0)
-                _enqueue(NetworkEvent.Disconnect, 0, null);
+            // Self-disconnect is NOT enqueued here.
+            // OpenRelayTransport.ConnectAsync decides whether to reconnect or
+            // raise NetworkEvent.Disconnect / TransportFailure to NGO.
             _closeTcs?.TrySetResult(true);
         }
 

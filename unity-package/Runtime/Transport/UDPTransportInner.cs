@@ -43,6 +43,7 @@ namespace OpenRelay.Transport
         // ── state ─────────────────────────────────────────────────────────────
         private readonly string  _endpoint;
         private readonly string  _joinCode;
+        private readonly string  _token;           // HMAC auth token ("" = auth disabled)
         private readonly float   _connectTimeoutSec;
         private readonly Action<NetworkEvent, ulong, byte[]> _enqueue;
 
@@ -53,6 +54,7 @@ namespace OpenRelay.Transport
         private bool Closed => _closeFlag != 0;
 
         private ulong _lastRttMs;
+        private bool  _wasKicked;
 
         // Prevents duplicate NGO events from server retransmissions.
         private readonly HashSet<ulong> _processedSeqs = new();
@@ -62,15 +64,22 @@ namespace OpenRelay.Transport
         private readonly List<byte[]> _preHandshakeBuf = new();
 
         public ulong LastRttMs => _lastRttMs;
+        /// <summary>
+        /// True when the relay server explicitly kicked this peer (not a network drop).
+        /// OpenRelayTransport.ConnectAsync checks this to skip the reconnect loop.
+        /// </summary>
+        public bool WasKicked => _wasKicked;
 
         public UDPTransportInner(
             string endpoint,
             string joinCode,
+            string token,
             float  connectTimeoutSec,
             Action<NetworkEvent, ulong, byte[]> enqueue)
         {
             _endpoint          = endpoint;
             _joinCode          = joinCode;
+            _token             = token ?? "";
             _connectTimeoutSec = connectTimeoutSec;
             _enqueue           = enqueue;
         }
@@ -138,7 +147,7 @@ namespace OpenRelay.Transport
         /// </summary>
         private async Task HandshakeAsync(CancellationToken ct)
         {
-            var bytes = RelayMessage.UDPHandshake(_joinCode).Encode();
+            var bytes = RelayMessage.UDPHandshake(_joinCode, _token).Encode();
             var ep    = new IPEndPoint(IPAddress.Any, 0);
 
             for (int attempt = 1; attempt <= HandshakeRetries; attempt++)
@@ -168,7 +177,14 @@ namespace OpenRelay.Transport
                     {
                         var msg  = RelayMessage.Decode(resp, 0, resp.Length);
                         var code = (UDPHandshakeErrorCode)msg.AuthorClientId;
-                        throw new Exception($"[OpenRelay][UDP] Join rejected: {code}");
+                        var reason = code switch
+                        {
+                            UDPHandshakeErrorCode.SessionNotFound => "session not found",
+                            UDPHandshakeErrorCode.SessionFull     => "session is full",
+                            UDPHandshakeErrorCode.InvalidToken    => "invalid or expired auth token",
+                            _                                     => $"error code {(ulong)code}",
+                        };
+                        throw new Exception($"[OpenRelay][UDP] Join rejected: {reason}");
                     }
                     _preHandshakeBuf.Add(resp);
                 }
@@ -231,8 +247,10 @@ namespace OpenRelay.Transport
                     break;
 
                 case RelayMessageType.KickFromRelay:
-                    Debug.Log("[OpenRelay][UDP] Kicked by host");
-                    _enqueue(NetworkEvent.Disconnect, 0, null);
+                    Debug.Log("[OpenRelay][UDP] Kicked by host.");
+                    _wasKicked = true;
+                    // Do NOT enqueue Disconnect here.
+                    // ConnectAsync sees WasKicked=true and sends Disconnect without retrying.
                     Close();
                     break;
 
