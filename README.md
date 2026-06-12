@@ -21,9 +21,9 @@ Deploy on your own VPS, pay nothing per concurrent user, own your infrastructure
 
 ---
 
-## Why OpenRelay?
+## Why Open Relay?
 
-| | Unity Relay | **OpenRelay** |
+| | Unity Relay | **Open Relay** |
 |---|---|---|
 | Hosting | Unity Cloud | **Your VPS** |
 | Cost | <a href="https://unity-player-services-pricing-estimator.ds.unity3d.com/relay?sessions=2000&players=4&duration=15&dataRate=1&usEu=70&asiaAu=30">Per-CCU</a> | Fixed server cost |
