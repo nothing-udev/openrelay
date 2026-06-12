@@ -26,7 +26,7 @@ Deploy on your own VPS, pay nothing per concurrent user, own your infrastructure
 | | Unity Relay | **OpenRelay** |
 |---|---|---|
 | Hosting | Unity Cloud | **Your VPS** |
-| Cost | Per-CCU | Fixed server cost |
+| Cost | <a href="https://unity-player-services-pricing-estimator.ds.unity3d.com/relay?sessions=2000&players=4&duration=15&dataRate=1&usEu=70&asiaAu=30">Per-CCU</a> | Fixed server cost |
 | Transports | Proprietary | **WebSocket + UDP** |
 | Broadcast | N sends → O(N) | **1 send → O(1)** |
 | Auth | Managed | **HMAC-SHA256, both transports** |
